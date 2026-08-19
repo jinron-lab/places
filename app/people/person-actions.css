@@ -1,0 +1,40 @@
+.person-detail-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.person-detail-top .person-detail-heading {
+  margin-bottom: 0;
+}
+
+.person-delete {
+  min-height: 44px;
+  border: 1px solid #e1c6c0;
+  border-radius: 8px;
+  background: white;
+  color: #9a4032;
+  padding: 10px 13px;
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.person-delete:hover {
+  background: #fbefec;
+}
+
+@media (max-width: 560px) {
+  .person-detail-top {
+    display: block;
+  }
+
+  .person-delete {
+    width: 100%;
+    margin-top: 16px;
+  }
+}

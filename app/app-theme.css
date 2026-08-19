@@ -1,0 +1,385 @@
+:root {
+  --ink: #163a3a;
+  --muted: #4e6b6b;
+  --paper: #ddf4f2;
+  --green: #2f8f87;
+  --lime: #d8faf6;
+  --tiffany: #81d8d0;
+  --tiffany-strong: #5fcfc5;
+  --tiffany-soft: #cdedec;
+  --tiffany-pale: #e9f8f6;
+  --tiffany-border: #a9d9d5;
+  --surface: #fbfefd;
+}
+
+html,
+body,
+.shared-app-shell,
+.shared-app-content {
+  background: #ddf4f2;
+  color: var(--ink);
+}
+
+.content-panel,
+.collections-panel,
+.side-quests-panel,
+.people-page,
+.log-memory-page,
+.home-dashboard-shell,
+.home-dashboard {
+  background: #ddf4f2;
+}
+
+.sidebar,
+.shared-sidebar {
+  background: #1f625d;
+}
+
+.brand-mark {
+  background: var(--tiffany);
+  color: #173e3a;
+}
+
+.primary-nav a.active,
+.primary-nav button.active {
+  background: var(--tiffany-strong);
+  color: #163a3a;
+}
+
+.primary-nav a.active span,
+.primary-nav button.active span {
+  color: #163a3a;
+}
+
+.shared-bottom-nav,
+.mobile-nav,
+.home-bottom-nav {
+  border-top-color: var(--tiffany-border);
+  background: #eaf9f7f2;
+  box-shadow: 0 -8px 25px #245c560a;
+}
+
+.shared-bottom-nav .active,
+.mobile-nav .active,
+.home-bottom-nav .active {
+  color: var(--green);
+}
+
+.eyebrow,
+.content-heading .eyebrow,
+.journal-hero .eyebrow,
+.collections-heading .eyebrow,
+.collection-detail-heading .eyebrow,
+.people-heading .eyebrow,
+.person-detail-heading .eyebrow,
+.side-quests-heading .eyebrow,
+.memory-kicker {
+  color: #397a74 !important;
+}
+
+a,
+.collections-back,
+.people-back,
+.change-place,
+.clear-filters,
+.collection-card-action {
+  accent-color: var(--green);
+}
+
+.search-box,
+.journal-search,
+.selected-place-card,
+.detail-card,
+.log-selected-place,
+.log-memory-form-card,
+.collection-card,
+.collection-entry,
+.person-card,
+.shared-places article,
+.person-memory-list article,
+.side-quest-card,
+.home-action,
+.home-place-card,
+.home-place-detail,
+.visited-place-card,
+.visited-map-heading,
+.map-state,
+.profile-sheet {
+  border-color: var(--tiffany-border);
+  background: var(--surface);
+  box-shadow: 0 8px 28px #245c560d;
+}
+
+.collection-card:hover,
+.person-card:hover,
+.place-card:hover,
+.entry-card:hover {
+  border-color: #9bcfc9;
+  background: var(--tiffany-pale);
+  box-shadow: 0 10px 28px #245c5612;
+}
+
+.place-card.selected,
+.entry-card.selected,
+.home-place-card.selected {
+  border-color: #89c7c0;
+  background: #effaf8;
+  box-shadow: inset 3px 0 var(--green);
+}
+
+.directions,
+.log-place-cta,
+.form-actions button[type="submit"],
+.profile-sheet-done,
+.home-action.primary,
+.home-quest-empty button,
+.side-quests-heading > button,
+.side-quests-empty button,
+.log-memory-empty a,
+.people-empty a,
+.place-search-submit {
+  border-color: #52bdb4;
+  background: var(--tiffany-strong);
+  color: #163a3a;
+  box-shadow: 0 8px 22px #328f8729;
+}
+
+.home-action.primary > span {
+  background: #ffffff20;
+  color: #163a3a;
+}
+
+.home-action:not(.primary),
+.form-actions button:not([type="submit"]),
+.collection-actions button,
+.collection-edit-actions button,
+.journal-entry-actions button,
+.quest-toggle,
+.log-selected-place > a,
+.person-delete {
+  border-color: #b8dcd7;
+  background: #f8fdfc;
+}
+
+.home-action:not(.primary):hover,
+.form-actions button:not([type="submit"]):hover,
+.collection-actions button:hover,
+.collection-edit-actions button:hover,
+.journal-entry-actions button:hover,
+.quest-toggle:hover {
+  background: var(--tiffany-soft);
+}
+
+.journal-entry-actions button.danger,
+.collection-actions button.danger,
+.person-delete {
+  border-color: #e2c4c0;
+  color: #994b43;
+}
+
+.entity-select > summary,
+.entity-menu,
+.journal-filter-trigger,
+.journal-filter-menu,
+.journal-form input,
+.journal-form textarea,
+.collection-edit-form input {
+  border-color: #c8e0dd;
+  background: #ffffff;
+}
+
+.journal-form input:focus,
+.journal-form textarea:focus,
+.search-box:focus-within,
+.journal-search:focus-within {
+  border-color: #66aaa3;
+  box-shadow: 0 0 0 3px #81d8d02e;
+}
+
+.entity-option-list button:hover,
+.entity-option-list button.active,
+.journal-filter-menu > button:hover,
+.journal-filter-menu > button.active,
+.journal-filter.open > .journal-filter-trigger {
+  background: var(--tiffany-soft);
+  color: #225f59;
+}
+
+.metadata-chips button,
+.category-chip,
+.log-place-category,
+.detail-topline span,
+.home-place-tags span,
+.quick-tag-picker button:hover,
+.quick-tag-picker button.active {
+  border-color: #b9ddd8;
+  background: var(--tiffany-soft);
+  color: #245f5a;
+}
+
+.person-chip,
+.home-place-tags span.person {
+  background: #f0edf7;
+  color: #655b78;
+}
+
+.person-avatar,
+.quest-status-icon {
+  background: var(--tiffany-soft);
+  color: #20655f;
+}
+
+.home-quest,
+.quest-links,
+.quest-section-empty {
+  border-color: var(--tiffany-border);
+  background: var(--tiffany-soft);
+}
+
+.empty-state,
+.home-empty,
+.people-empty,
+.collections-empty,
+.log-memory-empty {
+  color: #66807c;
+}
+
+.empty-state > span,
+.home-empty > span,
+.people-empty > span,
+.collections-empty > span,
+.log-memory-empty > span {
+  color: #4d8b85;
+}
+
+.journal-stats > div,
+.home-stats > div {
+  border-color: var(--tiffany-border);
+  background: var(--tiffany-pale);
+}
+
+.map-panel,
+.map-canvas,
+.visited-map-shell,
+.amap-container {
+  background-color: #d4efec;
+}
+
+.map-canvas {
+  background-image: linear-gradient(28deg, transparent 47%, #ffffffb8 48%, #ffffffb8 50%, transparent 51%), linear-gradient(112deg, transparent 47%, #ffffffa0 48%, #ffffffa0 50%, transparent 51%);
+}
+
+.river {
+  background: #a9ddd9;
+}
+
+.map-pin,
+.visited-marker {
+  background: #277a74;
+}
+
+.map-pin.active,
+.visited-marker:hover {
+  background: #d87568;
+}
+
+.rating-star-fill,
+.personal-stars,
+.memory-date span,
+.person-memory-meta > span,
+.home-visit-heading > div > span,
+.map-memory-list article span {
+  color: #b38336;
+}
+
+::selection {
+  background: #81d8d066;
+  color: #173e3a;
+}
+
+/* Saturated Tiffany emphasis while preserving the existing component hierarchy. */
+.section-home,
+.section-home .shared-app-content,
+.section-home .home-dashboard-shell,
+.section-home .home-dashboard {
+  background: #ddf4f2;
+}
+
+.section-home .home-action.primary {
+  border-color: #52bdb4;
+  background: #5fcfc5;
+  color: #163a3a;
+  box-shadow: 0 10px 28px #328f8733;
+}
+
+.section-home .home-action.primary > span {
+  background: #ffffff38;
+  color: #163a3a;
+}
+
+.section-home .home-action.primary small,
+.section-home .home-action.primary > b {
+  color: #295b58;
+}
+
+.section-home .home-action:not(.primary) {
+  border-color: #a9d9d5;
+  background: #e9f8f6;
+}
+
+.section-home .home-action:not(.primary) > span {
+  background: #c4e9e6;
+  color: #205f5a;
+}
+
+.section-home .home-quest,
+.section-home .home-quest-empty {
+  border-color: #9fd4cf;
+  background: #cdedec;
+}
+
+.section-home .home-quest-empty button {
+  background: #5fcfc5;
+  color: #163a3a;
+}
+
+.section-home .home-place-card,
+.section-home .home-empty,
+.section-home .home-place-detail {
+  border-color: #a9d9d5;
+  background: #f8fdfc;
+}
+
+.section-home .shared-bottom-nav {
+  border-top-color: #9fd2ce;
+  background: #e5f7f5f2;
+}
+
+.directions span,
+.log-place-cta span {
+  color: #163a3a;
+}
+
+.home-action:not(.primary),
+.form-actions button:not([type="submit"]),
+.collection-actions button:not(.danger),
+.collection-edit-actions button,
+.journal-entry-actions button:not(.danger),
+.quest-toggle,
+.log-selected-place > a {
+  border-color: #a9d9d5;
+  background: #e9f8f6;
+  color: #245f5a;
+}
+
+.shared-bottom-nav .active,
+.mobile-nav .active,
+.home-bottom-nav .active,
+.home-section-title > a,
+.home-section-title > button,
+.collections-back,
+.people-back,
+.change-place,
+.collection-card-action {
+  color: #23766f;
+}

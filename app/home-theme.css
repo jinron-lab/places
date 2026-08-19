@@ -1,0 +1,93 @@
+.section-home,
+.section-home .shared-app-content,
+.section-home .home-dashboard-shell,
+.section-home .home-dashboard {
+  background: #dff4f1;
+}
+
+.section-home .home-intro h1,
+.section-home .home-section-title h2,
+.section-home .home-quest h3 {
+  color: #164d49;
+}
+
+.section-home .home-intro .eyebrow,
+.section-home .home-section-title .eyebrow {
+  color: #397a74;
+}
+
+.section-home .home-action {
+  border-color: #acd7d1;
+  background: #f7fffd;
+  box-shadow: 0 7px 20px #23665e10;
+}
+
+.section-home .home-action > span {
+  background: #d3efeb;
+  color: #216d67;
+}
+
+.section-home .home-action.primary {
+  border-color: #287b74;
+  background: #287b74;
+  color: white;
+  box-shadow: 0 10px 25px #175d5630;
+}
+
+.section-home .home-action.primary > span {
+  background: #ffffff20;
+  color: #d9fff9;
+}
+
+.section-home .home-action.primary small,
+.section-home .home-action.primary > b {
+  color: #d5efeb;
+}
+
+.section-home .home-quest {
+  border-color: #a9d5cf;
+  background: #ccebe6;
+}
+
+.section-home .home-quest > p {
+  color: #35645f;
+}
+
+.section-home .home-quest-empty {
+  border-color: #a5d1cb;
+  background: #eaf9f7;
+}
+
+.section-home .home-quest-empty button {
+  background: #287b74;
+}
+
+.section-home .home-place-card,
+.section-home .home-empty,
+.section-home .home-place-detail {
+  border-color: #b7dcd7;
+  background: #f7fffd;
+}
+
+.section-home .home-place-card.selected {
+  border-color: #5ca79f;
+  box-shadow: inset 3px 0 #287b74;
+}
+
+.section-home .home-section-title > a,
+.section-home .home-section-title > button {
+  color: #216d67;
+}
+
+.section-home .shared-bottom-nav {
+  border-top-color: #afd6d1;
+  background: #effbf9f2;
+}
+
+.section-home .shared-bottom-nav .active {
+  color: #216d67;
+}
+
+.section-home .home-mobile-header .avatar {
+  background: #287b74;
+}
