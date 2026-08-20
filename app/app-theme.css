@@ -417,3 +417,12 @@ a,
 .profile-message { margin:0 0 12px!important;color:#28685f!important;font-size:10px!important }
 @media(max-width:480px){.auth-page{padding:14px}.auth-card{padding:26px 20px}.auth-card h1{font-size:34px}}
 @media(max-width:480px){.backup-settings{align-items:flex-start;flex-direction:column}.backup-settings>div:last-child{width:100%}.backup-settings button{flex:1}}
+
+/* iOS Safari zooms focused form controls whose rendered text is below 16px. */
+@media (max-width: 760px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
