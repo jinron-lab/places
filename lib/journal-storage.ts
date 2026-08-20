@@ -6,6 +6,7 @@ import { createUuid } from "@/lib/id";
 import type { SideQuest } from "@/lib/side-quests";
 
 export const JOURNAL_STORAGE_KEY = "explore.journal.v1";
+export const SIDE_QUEST_STORAGE_KEY = "explore.side-quests.v1";
 export const JOURNAL_SCHEMA_VERSION = 8 as const;
 
 export type JournalStore = {
@@ -159,4 +160,19 @@ export function readJournalStore(): JournalStore {
 
 export function writeJournalStore(store: JournalStore) {
   window.localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(store));
+}
+
+export function readLocalSideQuests(fallback: SideQuest[] = []): SideQuest[] {
+  if (typeof window === "undefined") return fallback;
+
+  try {
+    const value = window.localStorage.getItem(SIDE_QUEST_STORAGE_KEY);
+    return value ? (JSON.parse(value) as SideQuest[]) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeLocalSideQuests(sideQuests: SideQuest[]) {
+  window.localStorage.setItem(SIDE_QUEST_STORAGE_KEY, JSON.stringify(sideQuests));
 }
