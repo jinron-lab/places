@@ -426,3 +426,246 @@ a,
     font-size: 16px !important;
   }
 }
+
+/* Cohesive, readable type scale for phones. Desktop rules remain untouched. */
+@media (max-width: 760px) {
+  body {
+    font-size: 16px;
+    line-height: 1.45;
+  }
+
+  /* Page titles */
+  .home-intro h1,
+  .journal-hero h1,
+  .collections-heading h1,
+  .collection-detail-heading h1,
+  .people-heading h1,
+  .person-detail-heading h1,
+  .side-quests-heading h1,
+  .log-memory-header h1,
+  .auth-card h1 {
+    font-size: 38px !important;
+    line-height: 1.05 !important;
+  }
+
+  .visited-map-heading h1 {
+    font-size: 32px !important;
+    line-height: 1.08 !important;
+  }
+
+  /* Section and card headings */
+  .home-section-title h2,
+  .quest-section-heading h2,
+  .shared-places > h2,
+  .person-memory-section > h2,
+  .collections-empty h2,
+  .people-empty h2,
+  .side-quests-empty h2,
+  .log-memory-empty h2,
+  .map-state strong,
+  .profile-sheet h2 {
+    font-size: 24px !important;
+    line-height: 1.15 !important;
+  }
+
+  .home-place-copy h3,
+  .home-quest h3,
+  .collection-card h2,
+  .collection-entry h2,
+  .person-card h2,
+  .shared-places h3,
+  .person-memory-list h3,
+  .quest-copy h2,
+  .log-selected-place h2,
+  .visited-place-heading h2,
+  .home-detail-heading h2 {
+    font-size: 20px !important;
+    line-height: 1.2 !important;
+  }
+
+  .place-name strong,
+  .entry-title strong,
+  .home-empty h3 {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Body copy */
+  .home-intro > p:last-child,
+  .journal-hero p:last-child,
+  .collections-heading > p:last-child,
+  .collection-detail-heading > div > p:last-child,
+  .people-heading > p:last-child,
+  .person-detail-heading > div > p:last-child,
+  .side-quests-heading p:last-child,
+  .log-memory-header > p:last-child,
+  .auth-intro,
+  .profile-sheet > p:not(.eyebrow),
+  .home-place-copy > p,
+  .home-quest p,
+  .home-quest-empty p,
+  .collection-entry p,
+  .person-memory-list article > p,
+  .quest-copy > p,
+  .side-quests-empty p,
+  .collections-empty p,
+  .people-empty p,
+  .log-memory-empty p,
+  .map-state p,
+  .map-memory-list p,
+  .quest-section-empty p,
+  .memory-card blockquote {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+
+  .place-copy p,
+  .visit-entry p,
+  .home-visit-list article > p,
+  .home-detail-heading > div > p:last-child,
+  .home-empty p,
+  .address {
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Labels, actions, and secondary information */
+  .eyebrow,
+  .journal-form label > span,
+  .journal-form legend,
+  .collection-edit-form label > span:first-child,
+  .auth-card label,
+  .home-action strong,
+  .home-action small,
+  .log-memory-header > a,
+  .log-selected-place > a,
+  .collections-back,
+  .people-back,
+  .collections-empty a,
+  .people-empty a,
+  .log-memory-empty a,
+  .home-empty a,
+  .home-section-title > a,
+  .home-section-title > button,
+  .side-quests-heading > button,
+  .side-quests-empty button,
+  .quest-toggle,
+  .quest-section-heading > button,
+  .journal-entry-actions button,
+  .collection-actions button,
+  .collection-edit-actions button,
+  .edit-entry,
+  .edit-memory,
+  .form-actions button,
+  .entity-select > summary,
+  .entity-option-list button,
+  .entity-create-trigger,
+  .entity-create button,
+  .journal-filter-trigger,
+  .journal-filter-menu > button,
+  .journal-filters summary,
+  .journal-filters details > div button,
+  .clear-filters,
+  .auth-card form > button,
+  .auth-switch,
+  .profile-actions button,
+  .backup-settings strong,
+  .backup-settings button {
+    font-size: 16px !important;
+    line-height: 1.25;
+  }
+
+  .log-place-cta,
+  .place-search-submit,
+  .journal-empty button,
+  .memory-footer button,
+  .change-place,
+  .create-memory {
+    font-size: 16px !important;
+    line-height: 1.25;
+  }
+
+  /* Metadata and captions remain subordinate but readable. */
+  .home-stats span,
+  .home-place-copy time,
+  .home-place-meta,
+  .home-place-tags span,
+  .collection-card p,
+  .collection-entry time,
+  .person-stats,
+  .person-card-copy > p,
+  .shared-places p,
+  .shared-places article > strong span,
+  .person-memory-meta time,
+  .people-muted,
+  .quest-meta,
+  .quest-links strong,
+  .quest-links span,
+  .log-local-name,
+  .log-place-category,
+  .visited-map-heading p,
+  .visited-place-heading p,
+  .visited-place-heading > strong span,
+  .map-memory-list time,
+  .visited-place-card > small,
+  .map-attribution,
+  .journal-stats span,
+  .entry-title time,
+  .entry-card p,
+  .memory-kicker,
+  .memory-date time,
+  .memory-footer span,
+  .memory-metadata span,
+  .metadata-chips button,
+  .metadata-suggestions button,
+  .backup-settings span,
+  .auth-error,
+  .auth-message,
+  .profile-error,
+  .profile-message {
+    font-size: 15px !important;
+    line-height: 1.4;
+  }
+
+  .place-name small,
+  .place-copy > div:last-child,
+  .results-title span,
+  .entry-title time,
+  .personal-stars,
+  .memory-date span,
+  .visit-entry time,
+  .visit-entry > div span,
+  .home-visit-heading time,
+  .home-visit-heading > div > span,
+  .home-detail-heading > strong span {
+    font-size: 15px !important;
+    line-height: 1.4;
+  }
+
+  .shared-bottom-nav a,
+  .shared-bottom-nav button,
+  .mobile-nav a,
+  .mobile-nav button,
+  .home-bottom-nav a,
+  .home-bottom-nav button {
+    font-size: 14px !important;
+    line-height: 1.1;
+  }
+
+  .profile-sheet {
+    max-height: 92svh;
+    overflow-y: auto;
+  }
+
+  .home-quest-empty {
+    flex-wrap: wrap;
+  }
+
+  .entry-title,
+  .person-memory-meta,
+  .collection-entry-title,
+  .quest-meta {
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+}
