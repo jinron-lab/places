@@ -14,8 +14,10 @@ import {
   loadSupabaseJournalStore,
   persistSupabaseJournalStore,
 } from "@/lib/journal-supabase";
+import { useAuth } from "@/app/auth-provider";
 
 type JournalUpdate = JournalStore | ((current: JournalStore) => JournalStore);
+const LEGACY_CLOUD_OWNER_KEY = "explore.journal.legacy-cloud-owner";
 
 type JournalContextValue = {
   journal: JournalStore;
@@ -26,23 +28,42 @@ type JournalContextValue = {
 const JournalContext = createContext<JournalContextValue | null>(null);
 
 export function JournalProvider({ children }: { children: ReactNode }) {
+  const { user, isAuthLoaded } = useAuth();
+  const userId = user?.id;
   const [journal, setJournal] = useState(createEmptyJournalStore);
   const [isLoaded, setIsLoaded] = useState(false);
   const persistenceMode = useRef<"loading" | "supabase" | "local">("loading");
   const writeQueue = useRef(Promise.resolve());
 
   useEffect(() => {
+    if (!isAuthLoaded || !userId) {
+      persistenceMode.current = "loading";
+      return;
+    }
+    const authenticatedUserId = userId;
     let cancelled = false;
 
     async function loadJournal() {
+      // This provider can survive an account switch before navigation completes.
+      // Clear the previous account's in-memory view before doing any I/O.
+      await Promise.resolve();
+      if (cancelled) return;
+      setJournal(createEmptyJournalStore());
+      setIsLoaded(false);
       // Keep the legacy read and migration until a Supabase load has succeeded.
       const localJournal = readJournalStore();
 
       try {
-        let cloudJournal = await loadSupabaseJournalStore();
-        if (!hasCloudData(cloudJournal) && hasCloudData(localJournal)) {
-          await persistSupabaseJournalStore(localJournal);
+        let cloudJournal = await loadSupabaseJournalStore(authenticatedUserId);
+        const legacyOwner = window.localStorage.getItem(LEGACY_CLOUD_OWNER_KEY);
+        const canClaimLegacyData = !legacyOwner || legacyOwner === authenticatedUserId;
+        if (!hasCloudData(cloudJournal) && hasCloudData(localJournal) && canClaimLegacyData) {
+          await persistSupabaseJournalStore(localJournal, authenticatedUserId);
+          window.localStorage.setItem(LEGACY_CLOUD_OWNER_KEY, authenticatedUserId);
           cloudJournal = { ...localJournal, sideQuests: [] };
+        }
+        if (!legacyOwner && hasCloudData(cloudJournal)) {
+          window.localStorage.setItem(LEGACY_CLOUD_OWNER_KEY, authenticatedUserId);
         }
 
         if (cancelled) return;
@@ -65,7 +86,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAuthLoaded, userId]);
 
   const updateJournal = useCallback((update: JournalUpdate) => {
     setJournal((current) => {
@@ -83,7 +104,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
         if (cloudDataChanged) {
           writeQueue.current = writeQueue.current
-            .then(() => persistSupabaseJournalStore(next))
+            .then(() => {
+              if (userId) return persistSupabaseJournalStore(next, userId);
+            })
             .catch((error) => {
               console.error("Supabase journal persistence failed.", error);
             });
@@ -95,7 +118,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
       return next;
     });
-  }, []);
+  }, [userId]);
 
   return <JournalContext.Provider value={{ journal, isLoaded, updateJournal }}>{children}</JournalContext.Provider>;
 }

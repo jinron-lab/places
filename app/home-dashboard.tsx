@@ -9,12 +9,15 @@ import { useJournal } from "@/app/journal-provider";
 import { categoryMeta } from "@/lib/places";
 import { generateSideQuest } from "@/lib/side-quests";
 import { ResponsiveAppShell } from "@/app/responsive-app-shell";
+import { useAuth } from "@/app/auth-provider";
+import { ProfileSheet } from "@/app/profile-sheet";
 
 const shortDateFormatter = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" });
 const longDateFormatter = new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" });
 
 export function HomeDashboard() {
   const { journal, isLoaded, updateJournal } = useJournal();
+  const { initials } = useAuth();
   const [showAllPlaces, setShowAllPlaces] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export function HomeDashboard() {
 
   return <ResponsiveAppShell active="home"><main className="home-dashboard-shell">
     <aside className="sidebar home-sidebar">
-      <header className="brand-row"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><button className="avatar" onClick={() => setShowProfile(true)}>AJ</button></header>
+      <header className="brand-row"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><button className="avatar" onClick={() => setShowProfile(true)}>{initials}</button></header>
       <nav className="primary-nav" aria-label="Main navigation">
         <Link className="active" href="/"><span>⌂</span> Home</Link>
         <Link href="/collections"><span>▦</span> Collections <b>{journal.categories.length}</b></Link>
@@ -58,7 +61,7 @@ export function HomeDashboard() {
     </aside>
 
     <section className="home-dashboard">
-      <header className="home-mobile-header"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><button className="avatar" onClick={() => setShowProfile(true)}>AJ</button></header>
+      <header className="home-mobile-header"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><button className="avatar" onClick={() => setShowProfile(true)}>{initials}</button></header>
       <section className="home-intro"><p className="eyebrow">MY PLACE JOURNAL</p><h1>Home</h1></section>
 
       <section className="home-actions" aria-label="Quick actions">
@@ -86,6 +89,6 @@ export function HomeDashboard() {
 
     <nav className="home-bottom-nav" aria-label="Primary mobile navigation"><Link className="active" href="/"><span>⌂</span>Home</Link><Link href="/collections"><span>▦</span>Collections</Link><Link href="/map"><span>⌖</span>Map</Link><button onClick={() => setShowProfile(true)}><span>○</span>Profile</button></nav>
 
-    {showProfile && <div className="profile-sheet-backdrop" role="presentation" onClick={() => setShowProfile(false)}><section className="profile-sheet" role="dialog" aria-modal="true" aria-labelledby="profile-sheet-title" onClick={(event) => event.stopPropagation()}><button className="profile-sheet-close" onClick={() => setShowProfile(false)} aria-label="Close profile and settings">×</button><div className="profile-avatar">AJ</div><p className="eyebrow">PROFILE & SETTINGS</p><h2 id="profile-sheet-title">Your journal, on this device.</h2><p>Explore currently keeps your places, memories, collections, and quests in this browser. Accounts and cloud sync are not enabled yet.</p><dl><div><dt>Places</dt><dd>{placeGroups.length}</dd></div><div><dt>Visits</dt><dd>{journal.entries.length}</dd></div><div><dt>Collections</dt><dd>{journal.categories.length}</dd></div></dl><button className="profile-sheet-done" onClick={() => setShowProfile(false)}>Done</button></section></div>}
+    {showProfile && <ProfileSheet onClose={() => setShowProfile(false)} placeCount={placeGroups.length} visitCount={journal.entries.length} collectionCount={journal.categories.length} />}
   </main></ResponsiveAppShell>;
 }

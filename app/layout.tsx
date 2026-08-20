@@ -9,6 +9,7 @@ import "./people/person-actions.css";
 import "./app-theme.css";
 import { JournalProvider } from "./journal-provider";
 import { ServiceWorkerRegistration } from "./service-worker-registration";
+import { AuthProvider } from "./auth-provider";
 
 export const metadata: Metadata = {
   title: "Explore — Your personal place journal",
@@ -42,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        <JournalProvider>{children}</JournalProvider>
+        <AuthProvider><JournalProvider>{children}</JournalProvider></AuthProvider>
         <ServiceWorkerRegistration />
       </body>
     </html>

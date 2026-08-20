@@ -17,6 +17,7 @@ const TABLES = {
 type JournalTable = (typeof TABLES)[keyof typeof TABLES];
 
 type PlaceRow = {
+  user_id: string;
   id: string;
   provider: Place["provider"];
   provider_place_id: string;
@@ -24,6 +25,7 @@ type PlaceRow = {
 };
 
 type EntryRow = {
+  user_id: string;
   id: string;
   place_id: string;
   visited_at: string;
@@ -36,6 +38,7 @@ type EntryRow = {
 };
 
 type CategoryRow = {
+  user_id: string;
   id: string;
   name: string;
   color: string;
@@ -44,6 +47,7 @@ type CategoryRow = {
 };
 
 type PersonRow = {
+  user_id: string;
   id: string;
   name: string;
   created_at: string;
@@ -53,13 +57,13 @@ function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
-export async function loadSupabaseJournalStore(): Promise<JournalStore> {
+export async function loadSupabaseJournalStore(userId: string): Promise<JournalStore> {
   const supabase = getSupabaseClient();
   const [placesResult, entriesResult, categoriesResult, peopleResult] = await Promise.all([
-    supabase.from(TABLES.places).select("id, provider, provider_place_id, data"),
-    supabase.from(TABLES.entries).select("id, place_id, visited_at, rating, notes, category_ids, person_ids, created_at, updated_at"),
-    supabase.from(TABLES.categories).select("id, name, color, icon, created_at"),
-    supabase.from(TABLES.people).select("id, name, created_at"),
+    supabase.from(TABLES.places).select("id, provider, provider_place_id, data").eq("user_id", userId),
+    supabase.from(TABLES.entries).select("id, place_id, visited_at, rating, notes, category_ids, person_ids, created_at, updated_at").eq("user_id", userId),
+    supabase.from(TABLES.categories).select("id, name, color, icon, created_at").eq("user_id", userId),
+    supabase.from(TABLES.people).select("id, name, created_at").eq("user_id", userId),
   ]);
 
   for (const result of [placesResult, entriesResult, categoriesResult, peopleResult]) {
@@ -103,8 +107,9 @@ export async function loadSupabaseJournalStore(): Promise<JournalStore> {
   return migrated;
 }
 
-function placeRow(place: Place): PlaceRow {
+function placeRow(place: Place, userId: string): PlaceRow {
   return {
+    user_id: userId,
     id: place.id,
     provider: place.provider,
     provider_place_id: place.providerPlaceId,
@@ -112,8 +117,9 @@ function placeRow(place: Place): PlaceRow {
   };
 }
 
-function entryRow(entry: JournalEntry): EntryRow {
+function entryRow(entry: JournalEntry, userId: string): EntryRow {
   return {
+    user_id: userId,
     id: entry.id,
     place_id: entry.placeId,
     visited_at: entry.visitedAt,
@@ -126,8 +132,9 @@ function entryRow(entry: JournalEntry): EntryRow {
   };
 }
 
-function categoryRow(category: Category): CategoryRow {
+function categoryRow(category: Category, userId: string): CategoryRow {
   return {
+    user_id: userId,
     id: category.id,
     name: category.name,
     color: category.color,
@@ -136,8 +143,9 @@ function categoryRow(category: Category): CategoryRow {
   };
 }
 
-function personRow(person: Person): PersonRow {
+function personRow(person: Person, userId: string): PersonRow {
   return {
+    user_id: userId,
     id: person.id,
     name: person.name,
     created_at: person.createdAt,
@@ -150,22 +158,22 @@ async function upsertRows(table: JournalTable, rows: object[]) {
   throwIfError(error);
 }
 
-async function deleteMissingRows(table: JournalTable, existingIds: string[], nextIds: string[]) {
+async function deleteMissingRows(table: JournalTable, userId: string, existingIds: string[], nextIds: string[]) {
   const next = new Set(nextIds);
   const removedIds = existingIds.filter((id) => !next.has(id));
   if (removedIds.length === 0) return;
-  const { error } = await getSupabaseClient().from(table).delete().in("id", removedIds);
+  const { error } = await getSupabaseClient().from(table).delete().eq("user_id", userId).in("id", removedIds);
   throwIfError(error);
 }
 
 /** Reconciles the four cloud-backed entities with the provider's next state. */
-export async function persistSupabaseJournalStore(store: JournalStore) {
+export async function persistSupabaseJournalStore(store: JournalStore, userId: string) {
   const supabase = getSupabaseClient();
   const [placesResult, entriesResult, categoriesResult, peopleResult] = await Promise.all([
-    supabase.from(TABLES.places).select("id"),
-    supabase.from(TABLES.entries).select("id"),
-    supabase.from(TABLES.categories).select("id"),
-    supabase.from(TABLES.people).select("id"),
+    supabase.from(TABLES.places).select("id").eq("user_id", userId),
+    supabase.from(TABLES.entries).select("id").eq("user_id", userId),
+    supabase.from(TABLES.categories).select("id").eq("user_id", userId),
+    supabase.from(TABLES.people).select("id").eq("user_id", userId),
   ]);
 
   for (const result of [placesResult, entriesResult, categoriesResult, peopleResult]) {
@@ -173,15 +181,15 @@ export async function persistSupabaseJournalStore(store: JournalStore) {
   }
 
   const places = Object.values(store.places);
-  await upsertRows(TABLES.places, places.map(placeRow));
-  await upsertRows(TABLES.categories, store.categories.map(categoryRow));
-  await upsertRows(TABLES.people, store.people.map(personRow));
-  await upsertRows(TABLES.entries, store.entries.map(entryRow));
+  await upsertRows(TABLES.places, places.map((place) => placeRow(place, userId)));
+  await upsertRows(TABLES.categories, store.categories.map((category) => categoryRow(category, userId)));
+  await upsertRows(TABLES.people, store.people.map((person) => personRow(person, userId)));
+  await upsertRows(TABLES.entries, store.entries.map((entry) => entryRow(entry, userId)));
 
-  await deleteMissingRows(TABLES.entries, (entriesResult.data ?? []).map((row) => row.id), store.entries.map((entry) => entry.id));
-  await deleteMissingRows(TABLES.places, (placesResult.data ?? []).map((row) => row.id), places.map((place) => place.id));
-  await deleteMissingRows(TABLES.categories, (categoriesResult.data ?? []).map((row) => row.id), store.categories.map((category) => category.id));
-  await deleteMissingRows(TABLES.people, (peopleResult.data ?? []).map((row) => row.id), store.people.map((person) => person.id));
+  await deleteMissingRows(TABLES.entries, userId, (entriesResult.data ?? []).map((row) => row.id), store.entries.map((entry) => entry.id));
+  await deleteMissingRows(TABLES.places, userId, (placesResult.data ?? []).map((row) => row.id), places.map((place) => place.id));
+  await deleteMissingRows(TABLES.categories, userId, (categoriesResult.data ?? []).map((row) => row.id), store.categories.map((category) => category.id));
+  await deleteMissingRows(TABLES.people, userId, (peopleResult.data ?? []).map((row) => row.id), store.people.map((person) => person.id));
 }
 
 export function hasCloudData(store: JournalStore) {
