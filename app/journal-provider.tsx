@@ -12,6 +12,7 @@ import {
 import {
   hasCloudData,
   loadSupabaseJournalStore,
+  persistSupabaseJournalChanges,
   persistSupabaseJournalStore,
 } from "@/lib/journal-supabase";
 import { useAuth } from "@/app/auth-provider";
@@ -105,7 +106,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         if (cloudDataChanged) {
           writeQueue.current = writeQueue.current
             .then(() => {
-              if (userId) return persistSupabaseJournalStore(next, userId);
+              if (userId) return persistSupabaseJournalChanges(current, next, userId);
             })
             .catch((error) => {
               console.error("Supabase journal persistence failed.", error);

@@ -166,6 +166,59 @@ async function deleteMissingRows(table: JournalTable, userId: string, existingId
   throwIfError(error);
 }
 
+async function deleteRows(table: JournalTable, userId: string, ids: string[]) {
+  if (ids.length === 0) return;
+  const { error } = await getSupabaseClient().from(table).delete().eq("user_id", userId).in("id", ids);
+  throwIfError(error);
+}
+
+function changedRows<T extends { id: string }>(previous: T[], next: T[]) {
+  const previousById = new Map(previous.map((item) => [item.id, item]));
+  return next.filter((item) => {
+    const existing = previousById.get(item.id);
+    return !existing || JSON.stringify(existing) !== JSON.stringify(item);
+  });
+}
+
+function removedIds<T extends { id: string }>(previous: T[], next: T[]) {
+  const nextIds = new Set(next.map((item) => item.id));
+  return previous.filter((item) => !nextIds.has(item.id)).map((item) => item.id);
+}
+
+export async function upsertSupabaseCategories(categories: Category[], userId: string) {
+  await upsertRows(TABLES.categories, categories.map((category) => categoryRow(category, userId)));
+}
+
+export async function deleteSupabaseCategories(categoryIds: string[], userId: string) {
+  await deleteRows(TABLES.categories, userId, categoryIds);
+}
+
+export async function upsertSupabasePeople(people: Person[], userId: string) {
+  await upsertRows(TABLES.people, people.map((person) => personRow(person, userId)));
+}
+
+export async function deleteSupabasePeople(personIds: string[], userId: string) {
+  await deleteRows(TABLES.people, userId, personIds);
+}
+
+/** Persists one provider update without requiring a broad cloud reconciliation. */
+export async function persistSupabaseJournalChanges(previous: JournalStore, next: JournalStore, userId: string) {
+  const previousPlaces = Object.values(previous.places);
+  const nextPlaces = Object.values(next.places);
+
+  await upsertRows(TABLES.places, changedRows(previousPlaces, nextPlaces).map((place) => placeRow(place, userId)));
+  await upsertSupabaseCategories(changedRows(previous.categories, next.categories), userId);
+  await upsertSupabasePeople(changedRows(previous.people, next.people), userId);
+  await upsertRows(TABLES.entries, changedRows(previous.entries, next.entries).map((entry) => entryRow(entry, userId)));
+
+  // Entries must be removed before their places. Category/person references
+  // are stored as ID arrays, so their rows can then be deleted independently.
+  await deleteRows(TABLES.entries, userId, removedIds(previous.entries, next.entries));
+  await deleteRows(TABLES.places, userId, removedIds(previousPlaces, nextPlaces));
+  await deleteSupabaseCategories(removedIds(previous.categories, next.categories), userId);
+  await deleteSupabasePeople(removedIds(previous.people, next.people), userId);
+}
+
 /** Reconciles the four cloud-backed entities with the provider's next state. */
 export async function persistSupabaseJournalStore(store: JournalStore, userId: string) {
   const supabase = getSupabaseClient();
