@@ -158,6 +158,42 @@ async function upsertRows(table: JournalTable, rows: object[]) {
   throwIfError(error);
 }
 
+async function insertJournalEntries(entries: JournalEntry[], userId: string) {
+  if (entries.length === 0) return;
+  const rows = entries.map((entry) => entryRow(entry, userId));
+  console.info("[journal-create-debug] Supabase insert payload", rows.map((row) => ({
+    id: row.id,
+    placeId: row.place_id,
+    visitedAt: row.visited_at,
+    rating: row.rating,
+    hasNotes: Boolean(row.notes),
+    categoryCount: row.category_ids.length,
+    personCount: row.person_ids.length,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  })));
+
+  const result = await getSupabaseClient()
+    .from(TABLES.entries)
+    .insert(rows)
+    .select("id");
+
+  if (result.error) {
+    console.error("[journal-create-debug] Supabase insert error", {
+      code: result.error.code,
+      message: result.error.message,
+      details: result.error.details,
+      hint: result.error.hint,
+    });
+  } else {
+    console.info("[journal-create-debug] Supabase insert response", {
+      rowCount: result.data?.length ?? 0,
+      entryIds: result.data?.map((row) => row.id) ?? [],
+    });
+  }
+  throwIfError(result.error);
+}
+
 async function deleteMissingRows(table: JournalTable, userId: string, existingIds: string[], nextIds: string[]) {
   const next = new Set(nextIds);
   const removedIds = existingIds.filter((id) => !next.has(id));
@@ -205,11 +241,16 @@ export async function deleteSupabasePeople(personIds: string[], userId: string) 
 export async function persistSupabaseJournalChanges(previous: JournalStore, next: JournalStore, userId: string) {
   const previousPlaces = Object.values(previous.places);
   const nextPlaces = Object.values(next.places);
+  const previousEntryIds = new Set(previous.entries.map((entry) => entry.id));
+  const createdEntries = next.entries.filter((entry) => !previousEntryIds.has(entry.id));
+  const updatedEntries = changedRows(previous.entries, next.entries)
+    .filter((entry) => previousEntryIds.has(entry.id));
 
   await upsertRows(TABLES.places, changedRows(previousPlaces, nextPlaces).map((place) => placeRow(place, userId)));
   await upsertSupabaseCategories(changedRows(previous.categories, next.categories), userId);
   await upsertSupabasePeople(changedRows(previous.people, next.people), userId);
-  await upsertRows(TABLES.entries, changedRows(previous.entries, next.entries).map((entry) => entryRow(entry, userId)));
+  await insertJournalEntries(createdEntries, userId);
+  await upsertRows(TABLES.entries, updatedEntries.map((entry) => entryRow(entry, userId)));
 
   // Entries must be removed before their places. Category/person references
   // are stored as ID arrays, so their rows can then be deleted independently.

@@ -21,6 +21,15 @@ export function LogPlaceApp({ selectedPlaceId }: { selectedPlaceId?: string }) {
     if (!place) return;
     const now = new Date().toISOString();
     const entry: JournalEntry = { id: createUuid(), placeId: place.id, ...values, createdAt: now, updatedAt: now };
+    console.info("[journal-create-debug] Create entry function called", {
+      entryId: entry.id,
+      placeId: entry.placeId,
+      visitedAt: entry.visitedAt,
+      rating: entry.rating ?? null,
+      hasNotes: Boolean(entry.notes),
+      categoryCount: entry.categoryIds.length,
+      personCount: entry.personIds.length,
+    });
     updateJournal((current) => ({ ...current, entries: [entry, ...current.entries], places: { ...current.places, [place.id]: place } }));
     clearLogPlaceSelection();
     router.push("/");
