@@ -427,6 +427,78 @@ a,
   }
 }
 
+/* Match the existing map heights with enough specificity to survive the
+   temporary layout state used during App Router navigation. */
+.shared-app-content .visited-map-page {
+  height: max(620px, calc(100svh - 68px - env(safe-area-inset-bottom)));
+  min-height: max(620px, calc(100svh - 68px - env(safe-area-inset-bottom)));
+}
+
+.shared-app-content .visited-map-page > .visited-amap-host {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+.visited-place-close {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--tiffany-pale);
+  color: var(--green);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.visited-place-close:hover {
+  background: #d9efec;
+}
+
+@media (max-width: 760px) {
+  /* The shared navigation is fixed, so the map owns only the viewport above
+     it. Avoid the old 620px minimum extending the map beneath the nav. */
+  .shared-app-content .visited-map-page {
+    height: calc(100svh - 68px - env(safe-area-inset-bottom));
+    min-height: 0;
+  }
+
+  /* Present the selected place as a bounded bottom sheet. The map remains
+     full-size behind it while long visit details scroll inside the sheet. */
+  .shared-app-content .visited-place-card {
+    z-index: 10;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: min(38svh, 320px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .visited-place-close {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .shared-app-content .visited-map-page { height: 100vh; min-height: 100vh }
+}
+
 /* Cohesive, readable type scale for phones. Desktop rules remain untouched. */
 @media (max-width: 760px) {
   body {

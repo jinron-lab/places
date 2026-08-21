@@ -4,7 +4,8 @@ export type AMapMarker = {
 
 export type AMapMap = {
   add(overlays: AMapMarker[]): void;
-  setFitView(overlays?: AMapMarker[], immediately?: boolean, avoid?: number[]): void;
+  setFitView(overlays?: AMapMarker[], immediately?: boolean, avoid?: number[], maxZoom?: number): void;
+  resize(): void;
   destroy(): void;
 };
 
@@ -26,14 +27,23 @@ export function loadAMap(apiKey: string, securityCode: string) {
   if (window.AMap) return Promise.resolve(window.AMap);
   if (amapPromise) return amapPromise;
 
-  amapPromise = new Promise<AMapNamespace>((resolve, reject) => {
+  const pendingLoad = new Promise<AMapNamespace>((resolve, reject) => {
     window._AMapSecurityConfig = { securityJsCode: securityCode };
     const script = document.createElement("script");
     script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(apiKey)}`;
     script.async = true;
     script.onload = () => window.AMap ? resolve(window.AMap) : reject(new Error("AMap loaded without its map API"));
-    script.onerror = () => reject(new Error("Unable to load AMap"));
+    script.onerror = () => {
+      script.remove();
+      reject(new Error("Unable to load AMap"));
+    };
     document.head.appendChild(script);
+  });
+
+  amapPromise = pendingLoad.catch((error: unknown) => {
+    // A transient mobile/PWA network failure must not poison future attempts.
+    amapPromise = null;
+    throw error;
   });
 
   return amapPromise;
