@@ -10,7 +10,6 @@ import { categoryMeta } from "@/lib/places";
 import { generateSideQuest } from "@/lib/side-quests";
 import { ResponsiveAppShell } from "@/app/responsive-app-shell";
 import { useAuth } from "@/app/auth-provider";
-import { ProfileSheet } from "@/app/profile-sheet";
 
 const shortDateFormatter = new Intl.DateTimeFormat("en", { month: "short", day: "numeric", year: "numeric" });
 const longDateFormatter = new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" });
@@ -21,7 +20,6 @@ export function HomeDashboard() {
   const [showAllPlaces, setShowAllPlaces] = useState(false);
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
 
   const sortedEntries = useMemo(() => [...journal.entries].sort((a, b) => b.visitedAt.localeCompare(a.visitedAt)), [journal.entries]);
   const placeGroups = useMemo(() => Array.from(new Set(sortedEntries.map((entry) => entry.placeId))).map((placeId) => ({
@@ -49,19 +47,19 @@ export function HomeDashboard() {
 
   return <ResponsiveAppShell active="home"><main className="home-dashboard-shell">
     <aside className="sidebar home-sidebar">
-      <header className="brand-row"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><button className="avatar" onClick={() => setShowProfile(true)}>{initials}</button></header>
+      <header className="brand-row"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><Link className="avatar" href="/profile">{initials}</Link></header>
       <nav className="primary-nav" aria-label="Main navigation">
         <Link className="active" href="/"><span>⌂</span> Home</Link>
         <Link href="/collections"><span>▦</span> Collections <b>{journal.categories.length}</b></Link>
         <Link href="/map"><span>⌖</span> Map <b>{placeGroups.length}</b></Link>
         <Link href="/side-quests"><span>◇</span> Side Quests <b>{journal.sideQuests.filter((quest) => quest.status === "active").length}</b></Link>
-        <button onClick={() => setShowProfile(true)}><span>○</span> Profile & Settings</button>
+        <Link href="/profile"><span>○</span> Profile & Friends</Link>
       </nav>
       <div className="sidebar-bottom"><div className="tiny-map"><span>•</span><i /></div><div><strong>My place journal</strong><small>{placeGroups.length} places remembered</small></div></div>
     </aside>
 
     <section className="home-dashboard">
-      <header className="home-mobile-header"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><button className="avatar" onClick={() => setShowProfile(true)}>{initials}</button></header>
+      <header className="home-mobile-header"><Link className="brand" href="/"><span className="brand-mark">E</span><span>Explore</span></Link><Link className="avatar" href="/profile">{initials}</Link></header>
       <section className="home-intro"><p className="eyebrow">MY PLACE JOURNAL</p><h1>Home</h1></section>
 
       <section className="home-actions" aria-label="Quick actions">
@@ -87,8 +85,6 @@ export function HomeDashboard() {
       </div>
     </section>
 
-    <nav className="home-bottom-nav" aria-label="Primary mobile navigation"><Link className="active" href="/"><span>⌂</span>Home</Link><Link href="/collections"><span>▦</span>Collections</Link><Link href="/map"><span>⌖</span>Map</Link><button onClick={() => setShowProfile(true)}><span>○</span>Profile</button></nav>
-
-    {showProfile && <ProfileSheet onClose={() => setShowProfile(false)} placeCount={placeGroups.length} visitCount={journal.entries.length} collectionCount={journal.categories.length} />}
+    <nav className="home-bottom-nav" aria-label="Primary mobile navigation"><Link className="active" href="/"><span>⌂</span>Home</Link><Link href="/collections"><span>▦</span>Collections</Link><Link href="/map"><span>⌖</span>Map</Link><Link href="/profile"><span>○</span>Profile</Link></nav>
   </main></ResponsiveAppShell>;
 }
