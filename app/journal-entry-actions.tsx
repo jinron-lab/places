@@ -3,20 +3,30 @@
 import { useJournal } from "./journal-provider";
 
 export function JournalEntryActions({ entryId, placeName, onEdit, onDeleted }: { entryId: string; placeName: string; onEdit: () => void; onDeleted?: () => void }) {
-  const { updateJournal } = useJournal();
+  const { journal, updateJournal } = useJournal();
+  const entry = journal.entries.find((item) => item.id === entryId);
+  const isShared = entry?.access === "shared";
 
   function deleteEntry() {
-    console.info("[mobile-delete-debug] Journal entry delete handler fired", { entryId, placeName });
     const confirmed = window.confirm(`Delete this visit to “${placeName}”? This cannot be undone.`);
-    console.info("[mobile-delete-debug] Journal entry confirmation result", { entryId, confirmed });
     if (!confirmed) return;
     updateJournal((current) => ({
       ...current,
       entries: current.entries.filter((entry) => entry.id !== entryId),
     }), { deletedEntryIds: [entryId] });
-    console.info("[mobile-delete-debug] Journal entry delete update dispatched", { entryId });
     onDeleted?.();
   }
+
+  function leaveEntry() {
+    if (!window.confirm(`Remove the shared visit to “${placeName}” from your journal?`)) return;
+    updateJournal((current) => ({
+      ...current,
+      entries: current.entries.filter((item) => item.id !== entryId),
+    }), { leftSharedEntryIds: [entryId] });
+    onDeleted?.();
+  }
+
+  if (isShared) return <div className="journal-entry-actions shared-entry-actions"><span>Shared by {entry.ownerDisplayName ?? `@${entry.ownerUsername ?? "Explore user"}`}</span><button type="button" className="danger" onClick={leaveEntry}>Leave</button></div>;
 
   return <div className="journal-entry-actions">
     <button type="button" onClick={onEdit}>Edit</button>

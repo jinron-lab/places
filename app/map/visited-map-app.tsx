@@ -53,10 +53,11 @@ export function VisitedMapApp() {
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
 
-  const visitedPlaces = useMemo(() => Array.from(new Set(journal.entries.map((entry) => entry.placeId))).map((placeId) => ({
+  const ownedEntries = useMemo(() => journal.entries.filter((entry) => entry.access !== "shared"), [journal.entries]);
+  const visitedPlaces = useMemo(() => Array.from(new Set(ownedEntries.map((entry) => entry.placeId))).map((placeId) => ({
     place: journal.places[placeId],
-    entries: journal.entries.filter((entry) => entry.placeId === placeId).sort((a, b) => b.visitedAt.localeCompare(a.visitedAt)),
-  })).filter((item) => Boolean(item.place)), [journal.entries, journal.places]);
+    entries: ownedEntries.filter((entry) => entry.placeId === placeId).sort((a, b) => b.visitedAt.localeCompare(a.visitedAt)),
+  })).filter((item) => Boolean(item.place)), [ownedEntries, journal.places]);
 
   const selectedPlace = selectedPlaceId
     ? visitedPlaces.find((item) => item.place.id === selectedPlaceId)

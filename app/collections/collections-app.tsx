@@ -77,14 +77,12 @@ export function CollectionDetail({ categoryId }: { categoryId: string }) {
   }
 
   function deleteCategory() {
-    console.info("[mobile-delete-debug] Category delete handler fired", { categoryId: normalizedCategoryId, categoryFound: Boolean(category) });
     if (!category) return;
     const affectedEntries = journal.entries.filter((entry) => entry.categoryIds.includes(category.id)).length;
     const message = affectedEntries > 0
       ? `Delete “${category.name}”? ${affectedEntries} journal ${affectedEntries === 1 ? "entry" : "entries"} will be kept, but removed from this collection.`
       : `Delete “${category.name}”? Your journal entries will not be deleted.`;
     const confirmed = window.confirm(message);
-    console.info("[mobile-delete-debug] Category confirmation result", { categoryId: category.id, confirmed });
     if (!confirmed) return;
 
     updateJournal((current) => ({
@@ -94,7 +92,6 @@ export function CollectionDetail({ categoryId }: { categoryId: string }) {
         ? { ...entry, categoryIds: entry.categoryIds.filter((id) => id !== category.id), updatedAt: new Date().toISOString() }
         : entry),
     }), { deletedCategoryIds: [category.id] });
-    console.info("[mobile-delete-debug] Category delete update dispatched", { categoryId: category.id });
     router.push("/collections");
   }
 

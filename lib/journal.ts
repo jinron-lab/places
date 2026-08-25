@@ -21,6 +21,10 @@ export type Person = {
   id: string;
   name: string;
   createdAt: string;
+  linkedUserId?: string;
+  linkedAt?: string;
+  linkedUsername?: string;
+  linkedDisplayName?: string;
 };
 
 /** One personal visit to a real-world place. */
@@ -34,6 +38,10 @@ export type JournalEntry = {
   personIds: Person["id"][];
   createdAt: string;
   updatedAt: string;
+  ownerId?: string;
+  access?: "owned" | "shared";
+  ownerUsername?: string;
+  ownerDisplayName?: string;
 };
 
 /** Metadata for a photo attached to one journal entry. */

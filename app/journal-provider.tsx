@@ -18,6 +18,7 @@ export type JournalMutation = {
   deletedEntryIds?: string[];
   deletedCategoryIds?: string[];
   deletedPersonIds?: string[];
+  leftSharedEntryIds?: string[];
 };
 
 type JournalContextValue = {

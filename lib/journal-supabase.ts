@@ -52,7 +52,12 @@ type PersonRow = {
   id: string;
   name: string;
   created_at: string;
+  linked_user_id: string | null;
+  linked_at: string | null;
 };
+
+type EntryPersonRow = { entry_id: string; person_id: string };
+type ProfileRow = { user_id: string; username: string; display_name: string };
 
 function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
@@ -61,9 +66,9 @@ function throwIfError(error: { message: string } | null) {
 export async function loadSupabaseJournalStore(userId: string): Promise<JournalStore> {
   const supabase = getSupabaseClient();
   const [entriesResult, categoriesResult, peopleResult] = await Promise.all([
-    supabase.from(TABLES.entries).select("id, place_id, visited_at, rating, notes, category_ids, person_ids, created_at, updated_at").eq("user_id", userId),
+    supabase.from(TABLES.entries).select("user_id, id, place_id, visited_at, rating, notes, category_ids, person_ids, created_at, updated_at"),
     supabase.from(TABLES.categories).select("id, name, color, icon, created_at").eq("user_id", userId),
-    supabase.from(TABLES.people).select("id, name, created_at").eq("user_id", userId),
+    supabase.from(TABLES.people).select("user_id, id, name, created_at, linked_user_id, linked_at").eq("user_id", userId),
   ]);
 
   for (const result of [entriesResult, categoriesResult, peopleResult]) {
@@ -71,6 +76,23 @@ export async function loadSupabaseJournalStore(userId: string): Promise<JournalS
   }
 
   const entries = (entriesResult.data ?? []) as EntryRow[];
+  const entryIds = entries.map((entry) => entry.id);
+  const ownerIds = Array.from(new Set(entries.map((entry) => entry.user_id)));
+  const linkedUserIds = Array.from(new Set(((peopleResult.data ?? []) as PersonRow[]).map((person) => person.linked_user_id).filter((id): id is string => Boolean(id))));
+  const [entryPeopleResult, profilesResult] = await Promise.all([
+    entryIds.length > 0
+      ? supabase.from("journal_entry_people").select("entry_id, person_id").in("entry_id", entryIds)
+      : Promise.resolve({ data: [] as EntryPersonRow[], error: null }),
+    ownerIds.length > 0 || linkedUserIds.length > 0
+      ? supabase.from("profiles").select("user_id, username, display_name").in("user_id", Array.from(new Set([...ownerIds, ...linkedUserIds])))
+      : Promise.resolve({ data: [] as ProfileRow[], error: null }),
+  ]);
+  throwIfError(entryPeopleResult.error);
+  throwIfError(profilesResult.error);
+  const normalizedPeople = (entryPeopleResult.data ?? []) as EntryPersonRow[];
+  const profilesById = new Map(((profilesResult.data ?? []) as ProfileRow[]).map((profile) => [profile.user_id, profile]));
+  const personIdsByEntry = new Map<string, string[]>();
+  for (const tag of normalizedPeople) personIdsByEntry.set(tag.entry_id, [...(personIdsByEntry.get(tag.entry_id) ?? []), tag.person_id]);
   const placeIds = Array.from(new Set(entries.map((entry) => entry.place_id)));
   const placesResult = placeIds.length > 0
     ? await supabase.from(TABLES.places).select("id, provider, provider_place_id, data").in("id", placeIds)
@@ -90,9 +112,13 @@ export async function loadSupabaseJournalStore(userId: string): Promise<JournalS
       rating: row.rating ?? undefined,
       notes: row.notes ?? undefined,
       categoryIds: row.category_ids ?? [],
-      personIds: row.person_ids ?? [],
+      personIds: personIdsByEntry.get(row.id) ?? row.person_ids ?? [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      ownerId: row.user_id,
+      access: row.user_id === userId ? "owned" : "shared",
+      ownerUsername: profilesById.get(row.user_id)?.username,
+      ownerDisplayName: profilesById.get(row.user_id)?.display_name,
     })),
     categories: categories.map((row) => ({
       id: row.id,
@@ -105,6 +131,10 @@ export async function loadSupabaseJournalStore(userId: string): Promise<JournalS
       id: row.id,
       name: row.name,
       createdAt: row.created_at,
+      linkedUserId: row.linked_user_id ?? undefined,
+      linkedAt: row.linked_at ?? undefined,
+      linkedUsername: row.linked_user_id ? profilesById.get(row.linked_user_id)?.username : undefined,
+      linkedDisplayName: row.linked_user_id ? profilesById.get(row.linked_user_id)?.display_name : undefined,
     })),
     sideQuests: [],
   });
@@ -145,6 +175,8 @@ function personRow(person: Person, userId: string): PersonRow {
     id: person.id,
     name: person.name,
     created_at: person.createdAt,
+    linked_user_id: person.linkedUserId ?? null,
+    linked_at: person.linkedAt ?? null,
   };
 }
 
@@ -190,6 +222,25 @@ async function ensureGlobalPlaces(places: Place[]) {
   }
 }
 
+async function saveEntryPeople(entries: JournalEntry[]) {
+  const supabase = getSupabaseClient();
+  for (const entry of entries) {
+    const { error } = await supabase.rpc("save_journal_entry_people", {
+      p_entry_id: entry.id,
+      p_person_ids: entry.personIds,
+    });
+    throwIfError(error);
+  }
+}
+
+async function leaveSharedEntries(entryIds: string[]) {
+  const supabase = getSupabaseClient();
+  for (const entryId of entryIds) {
+    const { error } = await supabase.rpc("leave_shared_entry", { p_entry_id: entryId });
+    throwIfError(error);
+  }
+}
+
 export async function upsertSupabaseCategories(categories: Category[], userId: string) {
   await upsertRows(TABLES.categories, categories.map((category) => categoryRow(category, userId)));
 }
@@ -218,17 +269,19 @@ export async function persistSupabaseJournalChanges(
   const previousEntryIds = new Set(previous.entries.map((entry) => entry.id));
   const createdEntries = next.entries.filter((entry) => !previousEntryIds.has(entry.id));
   const updatedEntries = changedRows(previous.entries, next.entries)
-    .filter((entry) => previousEntryIds.has(entry.id));
+    .filter((entry) => previousEntryIds.has(entry.id) && (entry.ownerId ?? userId) === userId);
 
   await ensureGlobalPlaces(changedRows(previousPlaces, nextPlaces));
   await upsertSupabaseCategories(changedRows(previous.categories, next.categories), userId);
   await upsertSupabasePeople(changedRows(previous.people, next.people), userId);
   await insertJournalEntries(createdEntries, userId);
   await upsertRows(TABLES.entries, updatedEntries.map((entry) => entryRow(entry, userId)));
+  await saveEntryPeople([...createdEntries, ...updatedEntries]);
 
   // Global provider POIs are never deleted during one user's reconciliation.
   // Category/person references are stored as ID arrays and remain user-owned.
   await deleteRows(TABLES.entries, userId, mutation.deletedEntryIds ?? []);
   await deleteSupabaseCategories(mutation.deletedCategoryIds ?? [], userId);
   await deleteSupabasePeople(mutation.deletedPersonIds ?? [], userId);
+  await leaveSharedEntries(mutation.leftSharedEntryIds ?? []);
 }
