@@ -48,7 +48,7 @@ export function PersonDetail({ personId }: { personId: string }) {
       entries: current.entries.map((entry) => entry.personIds.includes(person.id)
         ? { ...entry, personIds: entry.personIds.filter((id) => id !== person.id), updatedAt: new Date().toISOString() }
         : entry),
-    }));
+    }), { deletedPersonIds: [person.id] });
     router.push("/people");
   }
 

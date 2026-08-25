@@ -13,7 +13,7 @@ export function JournalEntryActions({ entryId, placeName, onEdit, onDeleted }: {
     updateJournal((current) => ({
       ...current,
       entries: current.entries.filter((entry) => entry.id !== entryId),
-    }));
+    }), { deletedEntryIds: [entryId] });
     console.info("[mobile-delete-debug] Journal entry delete update dispatched", { entryId });
     onDeleted?.();
   }

@@ -6,6 +6,7 @@ import {
 } from "@/lib/journal-storage";
 import type { Place } from "@/lib/places";
 import { getSupabaseClient } from "@/lib/supabase";
+import type { JournalMutation } from "@/app/journal-provider";
 
 const TABLES = {
   places: "places",
@@ -162,14 +163,6 @@ async function insertJournalEntries(entries: JournalEntry[], userId: string) {
   throwIfError(error);
 }
 
-async function deleteMissingRows(table: OwnedJournalTable, userId: string, existingIds: string[], nextIds: string[]) {
-  const next = new Set(nextIds);
-  const removedIds = existingIds.filter((id) => !next.has(id));
-  if (removedIds.length === 0) return;
-  const { error } = await getSupabaseClient().from(table).delete().eq("user_id", userId).in("id", removedIds);
-  throwIfError(error);
-}
-
 async function deleteRows(table: OwnedJournalTable, userId: string, ids: string[]) {
   if (ids.length === 0) return;
   const { error } = await getSupabaseClient().from(table).delete().eq("user_id", userId).in("id", ids);
@@ -182,11 +175,6 @@ function changedRows<T extends { id: string }>(previous: T[], next: T[]) {
     const existing = previousById.get(item.id);
     return !existing || JSON.stringify(existing) !== JSON.stringify(item);
   });
-}
-
-function removedIds<T extends { id: string }>(previous: T[], next: T[]) {
-  const nextIds = new Set(next.map((item) => item.id));
-  return previous.filter((item) => !nextIds.has(item.id)).map((item) => item.id);
 }
 
 async function ensureGlobalPlaces(places: Place[]) {
@@ -219,7 +207,12 @@ export async function deleteSupabasePeople(personIds: string[], userId: string) 
 }
 
 /** Persists one provider update without requiring a broad cloud reconciliation. */
-export async function persistSupabaseJournalChanges(previous: JournalStore, next: JournalStore, userId: string) {
+export async function persistSupabaseJournalChanges(
+  previous: JournalStore,
+  next: JournalStore,
+  userId: string,
+  mutation: JournalMutation = {},
+) {
   const previousPlaces = Object.values(previous.places);
   const nextPlaces = Object.values(next.places);
   const previousEntryIds = new Set(previous.entries.map((entry) => entry.id));
@@ -235,38 +228,7 @@ export async function persistSupabaseJournalChanges(previous: JournalStore, next
 
   // Global provider POIs are never deleted during one user's reconciliation.
   // Category/person references are stored as ID arrays and remain user-owned.
-  await deleteRows(TABLES.entries, userId, removedIds(previous.entries, next.entries));
-  await deleteSupabaseCategories(removedIds(previous.categories, next.categories), userId);
-  await deleteSupabasePeople(removedIds(previous.people, next.people), userId);
-}
-
-/** Reconciles owned cloud entities after ensuring their referenced global POIs. */
-export async function persistSupabaseJournalStore(store: JournalStore, userId: string) {
-  const supabase = getSupabaseClient();
-  const [entriesResult, categoriesResult, peopleResult] = await Promise.all([
-    supabase.from(TABLES.entries).select("id").eq("user_id", userId),
-    supabase.from(TABLES.categories).select("id").eq("user_id", userId),
-    supabase.from(TABLES.people).select("id").eq("user_id", userId),
-  ]);
-
-  for (const result of [entriesResult, categoriesResult, peopleResult]) {
-    throwIfError(result.error);
-  }
-
-  const places = Object.values(store.places);
-  await ensureGlobalPlaces(places);
-  await upsertRows(TABLES.categories, store.categories.map((category) => categoryRow(category, userId)));
-  await upsertRows(TABLES.people, store.people.map((person) => personRow(person, userId)));
-  await upsertRows(TABLES.entries, store.entries.map((entry) => entryRow(entry, userId)));
-
-  await deleteMissingRows(TABLES.entries, userId, (entriesResult.data ?? []).map((row) => row.id), store.entries.map((entry) => entry.id));
-  await deleteMissingRows(TABLES.categories, userId, (categoriesResult.data ?? []).map((row) => row.id), store.categories.map((category) => category.id));
-  await deleteMissingRows(TABLES.people, userId, (peopleResult.data ?? []).map((row) => row.id), store.people.map((person) => person.id));
-}
-
-export function hasCloudData(store: JournalStore) {
-  return store.entries.length > 0
-    || Object.keys(store.places).length > 0
-    || store.categories.length > 0
-    || store.people.length > 0;
+  await deleteRows(TABLES.entries, userId, mutation.deletedEntryIds ?? []);
+  await deleteSupabaseCategories(mutation.deletedCategoryIds ?? [], userId);
+  await deleteSupabasePeople(mutation.deletedPersonIds ?? [], userId);
 }

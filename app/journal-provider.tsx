@@ -4,26 +4,26 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 import {
   createEmptyJournalStore,
   readLocalSideQuests,
-  readJournalStore,
   writeLocalSideQuests,
-  writeJournalStore,
   type JournalStore,
 } from "@/lib/journal-storage";
 import {
-  hasCloudData,
   loadSupabaseJournalStore,
   persistSupabaseJournalChanges,
-  persistSupabaseJournalStore,
 } from "@/lib/journal-supabase";
 import { useAuth } from "@/app/auth-provider";
 
 type JournalUpdate = JournalStore | ((current: JournalStore) => JournalStore);
-const LEGACY_CLOUD_OWNER_KEY = "explore.journal.legacy-cloud-owner";
+export type JournalMutation = {
+  deletedEntryIds?: string[];
+  deletedCategoryIds?: string[];
+  deletedPersonIds?: string[];
+};
 
 type JournalContextValue = {
   journal: JournalStore;
   isLoaded: boolean;
-  updateJournal: (update: JournalUpdate) => void;
+  updateJournal: (update: JournalUpdate, mutation?: JournalMutation) => void;
 };
 
 const JournalContext = createContext<JournalContextValue | null>(null);
@@ -33,7 +33,9 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   const userId = user?.id;
   const [journal, setJournal] = useState(createEmptyJournalStore);
   const [isLoaded, setIsLoaded] = useState(false);
-  const persistenceMode = useRef<"loading" | "supabase" | "local">("loading");
+  const [cloudError, setCloudError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const persistenceMode = useRef<"loading" | "supabase" | "error">("loading");
   const writeQueue = useRef(Promise.resolve());
 
   useEffect(() => {
@@ -51,35 +53,24 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setJournal(createEmptyJournalStore());
       setIsLoaded(false);
-      // Keep the legacy read and migration until a Supabase load has succeeded.
-      const localJournal = readJournalStore();
+      setCloudError(null);
 
       try {
-        let cloudJournal = await loadSupabaseJournalStore(authenticatedUserId);
-        const legacyOwner = window.localStorage.getItem(LEGACY_CLOUD_OWNER_KEY);
-        const canClaimLegacyData = !legacyOwner || legacyOwner === authenticatedUserId;
-        if (!hasCloudData(cloudJournal) && hasCloudData(localJournal) && canClaimLegacyData) {
-          await persistSupabaseJournalStore(localJournal, authenticatedUserId);
-          window.localStorage.setItem(LEGACY_CLOUD_OWNER_KEY, authenticatedUserId);
-          cloudJournal = { ...localJournal, sideQuests: [] };
-        }
-        if (!legacyOwner && hasCloudData(cloudJournal)) {
-          window.localStorage.setItem(LEGACY_CLOUD_OWNER_KEY, authenticatedUserId);
-        }
+        const cloudJournal = await loadSupabaseJournalStore(authenticatedUserId);
 
         if (cancelled) return;
         persistenceMode.current = "supabase";
         setJournal({
           ...cloudJournal,
-          sideQuests: readLocalSideQuests(localJournal.sideQuests),
+          sideQuests: readLocalSideQuests(),
         });
+        setIsLoaded(true);
       } catch (error) {
         if (cancelled) return;
-        console.error("Supabase journal loading failed; using legacy local storage.", error);
-        persistenceMode.current = "local";
-        setJournal(localJournal);
-      } finally {
-        if (!cancelled) setIsLoaded(true);
+        console.error("Supabase journal loading failed.", error);
+        persistenceMode.current = "error";
+        setJournal(createEmptyJournalStore());
+        setCloudError(error instanceof Error ? error.message : "An unknown Supabase error occurred.");
       }
     }
 
@@ -87,41 +78,60 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoaded, userId]);
+  }, [isAuthLoaded, loadAttempt, userId]);
 
-  const updateJournal = useCallback((update: JournalUpdate) => {
+  const updateJournal = useCallback((update: JournalUpdate, mutation: JournalMutation = {}) => {
     setJournal((current) => {
+      if (persistenceMode.current !== "supabase") {
+        console.error("Journal mutation blocked because authenticated cloud data is not loaded.");
+        return current;
+      }
+
       const next = typeof update === "function" ? update(current) : update;
 
       if (next.sideQuests !== current.sideQuests) {
         writeLocalSideQuests(next.sideQuests);
       }
 
-      if (persistenceMode.current === "supabase") {
-        const cloudDataChanged = next.entries !== current.entries
-          || next.places !== current.places
-          || next.categories !== current.categories
-          || next.people !== current.people;
+      const cloudDataChanged = next.entries !== current.entries
+        || next.places !== current.places
+        || next.categories !== current.categories
+        || next.people !== current.people;
 
-        if (cloudDataChanged) {
-          writeQueue.current = writeQueue.current
-            .then(() => {
-              if (userId) return persistSupabaseJournalChanges(current, next, userId);
-            })
-            .catch((error) => {
-              console.error("Supabase journal persistence failed.", error);
-            });
-        }
-      } else {
-        // Retain the existing persistence path until Supabase loading is confirmed.
-        writeJournalStore(next);
+      if (cloudDataChanged) {
+        writeQueue.current = writeQueue.current
+          .then(() => {
+            if (!userId) throw new Error("The authenticated user is unavailable.");
+            return persistSupabaseJournalChanges(current, next, userId, mutation);
+          })
+          .catch((error) => {
+            console.error("Supabase journal persistence failed.", error);
+            persistenceMode.current = "error";
+            setIsLoaded(false);
+            setCloudError(error instanceof Error ? error.message : "An unknown Supabase sync error occurred.");
+          });
       }
 
       return next;
     });
   }, [userId]);
 
-  return <JournalContext.Provider value={{ journal, isLoaded, updateJournal }}>{children}</JournalContext.Provider>;
+  const content = !user ? children : cloudError ? (
+    <main className="cloud-load-state" role="alert">
+      <div>
+        <span aria-hidden="true">!</span>
+        <p className="eyebrow">CLOUD JOURNAL UNAVAILABLE</p>
+        <h1>Your journal could not be loaded.</h1>
+        <p>No local journal was opened and no changes were saved. Your existing browser data remains untouched.</p>
+        <details><summary>Technical details</summary><code>{cloudError}</code></details>
+        <button type="button" onClick={() => setLoadAttempt((attempt) => attempt + 1)}>Retry</button>
+      </div>
+    </main>
+  ) : !isLoaded ? (
+    <div className="auth-loading">Opening your cloud journal…</div>
+  ) : children;
+
+  return <JournalContext.Provider value={{ journal, isLoaded, updateJournal }}>{content}</JournalContext.Provider>;
 }
 
 export function useJournal() {

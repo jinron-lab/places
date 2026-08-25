@@ -93,7 +93,7 @@ export function CollectionDetail({ categoryId }: { categoryId: string }) {
       entries: current.entries.map((entry) => entry.categoryIds.includes(category.id)
         ? { ...entry, categoryIds: entry.categoryIds.filter((id) => id !== category.id), updatedAt: new Date().toISOString() }
         : entry),
-    }));
+    }), { deletedCategoryIds: [category.id] });
     console.info("[mobile-delete-debug] Category delete update dispatched", { categoryId: category.id });
     router.push("/collections");
   }
