@@ -8,6 +8,7 @@ import {
   type JournalStore,
 } from "@/lib/journal-storage";
 import {
+  isTransientJournalLoadError,
   loadSupabaseJournalStore,
   persistSupabaseJournalChanges,
 } from "@/lib/journal-supabase";
@@ -30,17 +31,20 @@ type JournalContextValue = {
 const JournalContext = createContext<JournalContextValue | null>(null);
 
 export function JournalProvider({ children }: { children: ReactNode }) {
-  const { user, isAuthLoaded } = useAuth();
+  const { user, session, isAuthLoaded } = useAuth();
   const userId = user?.id;
+  const hasUser = Boolean(user);
+  const hasSession = Boolean(session);
   const [journal, setJournal] = useState(createEmptyJournalStore);
   const [isLoaded, setIsLoaded] = useState(false);
   const [cloudError, setCloudError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const persistenceMode = useRef<"loading" | "supabase" | "error">("loading");
   const writeQueue = useRef(Promise.resolve());
+  const initialLoadStarted = useRef(false);
 
   useEffect(() => {
-    if (!isAuthLoaded || !userId) {
+    if (!isAuthLoaded || !hasSession || !userId) {
       persistenceMode.current = "loading";
       return;
     }
@@ -56,8 +60,32 @@ export function JournalProvider({ children }: { children: ReactNode }) {
       setIsLoaded(false);
       setCloudError(null);
 
+      const isInitialLoad = !initialLoadStarted.current;
+      initialLoadStarted.current = true;
+      if (isInitialLoad) {
+        console.info("[initial-journal-load] Starting authenticated cloud load.", {
+          isAuthLoaded,
+          hasSession,
+          hasUser,
+          userId: authenticatedUserId,
+        });
+      }
+
       try {
-        const cloudJournal = await loadSupabaseJournalStore(authenticatedUserId);
+        let cloudJournal;
+        try {
+          cloudJournal = await loadSupabaseJournalStore(authenticatedUserId, { diagnostic: isInitialLoad });
+        } catch (firstError) {
+          if (cancelled) return;
+          if (isInitialLoad && isTransientJournalLoadError(firstError)) {
+            console.warn("[initial-journal-load] First cloud load failed; retrying once.", firstError);
+            await new Promise((resolve) => window.setTimeout(resolve, 350));
+            if (cancelled) return;
+            cloudJournal = await loadSupabaseJournalStore(authenticatedUserId, { diagnostic: true });
+          } else {
+            throw firstError;
+          }
+        }
 
         if (cancelled) return;
         persistenceMode.current = "supabase";
@@ -79,7 +107,7 @@ export function JournalProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [isAuthLoaded, loadAttempt, userId]);
+  }, [hasSession, hasUser, isAuthLoaded, loadAttempt, userId]);
 
   const updateJournal = useCallback((update: JournalUpdate, mutation: JournalMutation = {}) => {
     setJournal((current) => {

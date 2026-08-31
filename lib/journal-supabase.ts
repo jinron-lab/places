@@ -59,11 +59,45 @@ type PersonRow = {
 type EntryPersonRow = { entry_id: string; person_id: string };
 type ProfileRow = { user_id: string; username: string; display_name: string };
 
+type SupabaseLoadError = { code?: string; message: string };
+
+class JournalLoadError extends Error {
+  code?: string;
+
+  constructor(request: string, error: SupabaseLoadError) {
+    super(`${request}: ${error.message}`);
+    this.name = "SupabaseJournalLoadError";
+    this.code = error.code;
+  }
+}
+
+export function isTransientJournalLoadError(error: unknown) {
+  if (!(error instanceof JournalLoadError)) return false;
+  return error.code === "PGRST301"
+    || /failed to fetch|network|timeout|timed out|connection|load failed/i.test(error.message);
+}
+
+function throwLoadError(request: string, error: SupabaseLoadError | null, diagnostic: boolean) {
+  if (!error) return;
+  if (diagnostic) {
+    console.error("[initial-journal-load] Supabase request failed.", {
+      request,
+      code: error.code ?? null,
+      message: error.message,
+    });
+  }
+  throw new JournalLoadError(request, error);
+}
+
 function throwIfError(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
-export async function loadSupabaseJournalStore(userId: string): Promise<JournalStore> {
+export async function loadSupabaseJournalStore(
+  userId: string,
+  options: { diagnostic?: boolean } = {},
+): Promise<JournalStore> {
+  const diagnostic = options.diagnostic ?? false;
   const supabase = getSupabaseClient();
   const [entriesResult, categoriesResult, peopleResult] = await Promise.all([
     supabase.from(TABLES.entries).select("user_id, id, place_id, visited_at, rating, notes, category_ids, person_ids, created_at, updated_at"),
@@ -71,9 +105,9 @@ export async function loadSupabaseJournalStore(userId: string): Promise<JournalS
     supabase.from(TABLES.people).select("user_id, id, name, created_at, linked_user_id, linked_at").eq("user_id", userId),
   ]);
 
-  for (const result of [entriesResult, categoriesResult, peopleResult]) {
-    throwIfError(result.error);
-  }
+  throwLoadError("journal_entries", entriesResult.error, diagnostic);
+  throwLoadError("categories", categoriesResult.error, diagnostic);
+  throwLoadError("people", peopleResult.error, diagnostic);
 
   const entries = (entriesResult.data ?? []) as EntryRow[];
   const entryIds = entries.map((entry) => entry.id);
@@ -87,8 +121,8 @@ export async function loadSupabaseJournalStore(userId: string): Promise<JournalS
       ? supabase.from("profiles").select("user_id, username, display_name").in("user_id", Array.from(new Set([...ownerIds, ...linkedUserIds])))
       : Promise.resolve({ data: [] as ProfileRow[], error: null }),
   ]);
-  throwIfError(entryPeopleResult.error);
-  throwIfError(profilesResult.error);
+  throwLoadError("journal_entry_people", entryPeopleResult.error, diagnostic);
+  throwLoadError("profiles", profilesResult.error, diagnostic);
   const normalizedPeople = (entryPeopleResult.data ?? []) as EntryPersonRow[];
   const profilesById = new Map(((profilesResult.data ?? []) as ProfileRow[]).map((profile) => [profile.user_id, profile]));
   const personIdsByEntry = new Map<string, string[]>();
@@ -97,7 +131,7 @@ export async function loadSupabaseJournalStore(userId: string): Promise<JournalS
   const placesResult = placeIds.length > 0
     ? await supabase.from(TABLES.places).select("id, provider, provider_place_id, data").in("id", placeIds)
     : { data: [] as PlaceRow[], error: null };
-  throwIfError(placesResult.error);
+  throwLoadError("places", placesResult.error, diagnostic);
 
   const places = (placesResult.data ?? []) as PlaceRow[];
   const categories = (categoriesResult.data ?? []) as CategoryRow[];
