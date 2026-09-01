@@ -131,8 +131,8 @@ export function ExploreApp({ initialMode = "journal" }: { initialMode?: "journal
     return matchesSearch && matchesCategory && matchesPerson && matchesRating;
   }), [sortedEntries, journal.places, journalQuery, categoryFilterIds, personFilterIds, ratingFilters]);
   const uniquePlaceIds = useMemo(() => Array.from(new Set(journal.entries.map((entry) => entry.placeId))), [journal.entries]);
-  const filteredPlaceIds = useMemo(() => Array.from(new Set(filteredEntries.map((entry) => entry.placeId))), [filteredEntries]);
-  const journalPlaces = filteredPlaceIds.map((id) => journal.places[id]).filter((place): place is Place => Boolean(place));
+  const journalMapPlaceIds = useMemo(() => Array.from(new Set(filteredEntries.filter((entry) => entry.access !== "shared").map((entry) => entry.placeId))), [filteredEntries]);
+  const journalMapPlaces = journalMapPlaceIds.map((id) => journal.places[id]).filter((place): place is Place => Boolean(place));
   const activeEntry = filteredEntries.find((entry) => entry.id === activeEntryId) ?? filteredEntries[0] ?? null;
   const activeJournalPlace = activeEntry ? journal.places[activeEntry.placeId] : null;
   const activeCategories = activeEntry ? journal.categories.filter((item) => activeEntry.categoryIds.includes(item.id)) : [];
@@ -140,7 +140,7 @@ export function ExploreApp({ initialMode = "journal" }: { initialMode?: "journal
   const placeVisitCount = activeJournalPlace ? journal.entries.filter((entry) => entry.placeId === activeJournalPlace.id).length : 0;
   const searchPlaces = useMemo(() => searchResults.map((result) => result.place), [searchResults]);
   const searchDistanceByPlaceId = useMemo(() => new Map(searchResults.map((result) => [result.place.id, result.distanceMeters])), [searchResults]);
-  const mapPlaces = mode === "journal" ? journalPlaces : searchPlaces;
+  const mapPlaces = mode === "journal" ? journalMapPlaces : searchPlaces;
   const selectedPlace = mode === "journal" ? activeJournalPlace : selectedSearchPlace;
 
   function openJournal() {
@@ -219,9 +219,9 @@ export function ExploreApp({ initialMode = "journal" }: { initialMode?: "journal
           {filteredEntries.map((entry) => {
             const place = journal.places[entry.placeId];
             if (!place) return null;
-            return <button key={entry.id} className={`entry-card ${activeEntry?.id === entry.id ? "selected" : ""}`} onClick={() => { setActiveEntryId(entry.id); setEditingEntryId(null); }}>
+            return <button key={entry.id} className={`entry-card ${entry.access === "shared" ? "shared-visit" : ""} ${activeEntry?.id === entry.id ? "selected" : ""}`} onClick={() => { setActiveEntryId(entry.id); setEditingEntryId(null); }}>
               <div className={`entry-icon art-${place.category}`}>{categoryMeta[place.category].icon}</div>
-              <div><div className="entry-title"><strong>{place.name}</strong><time>{shortDateFormatter.format(new Date(entry.visitedAt))}</time></div><span className="personal-stars">{formatPersonalRating(entry.rating)}</span><p>{entry.notes || "A visit worth remembering."}</p></div><span className="card-arrow">›</span>
+              <div><div className="entry-title"><strong>{place.name}</strong><time>{shortDateFormatter.format(new Date(entry.visitedAt))}</time></div>{entry.access === "shared" && <span className="shared-memory-label">Shared by {entry.ownerDisplayName ?? `@${entry.ownerUsername ?? "Explore user"}`} · read only</span>}<span className="personal-stars">{formatPersonalRating(entry.rating)}</span><p>{entry.notes || "A visit worth remembering."}</p></div><span className="card-arrow">›</span>
             </button>;
           })}
           {!filteredEntries.length && <div className="empty-state journal-empty"><span>✎</span><strong>{journal.entries.length ? "No memories match" : "Your journal begins here"}</strong><p>{journal.entries.length ? "Try clearing one of your filters." : "Log a place you have visited, then add the memory you want to keep."}</p>{!journal.entries.length && <button onClick={openLogger}>Log your first place</button>}</div>}
@@ -254,7 +254,7 @@ export function ExploreApp({ initialMode = "journal" }: { initialMode?: "journal
         <div className="map-tools"><button aria-label="Locate me">◎</button><button aria-label="Zoom in">＋</button><button aria-label="Zoom out">−</button></div><div className="map-provider">高德地图 · AMap</div>
       </div>
 
-      {mode === "journal" && activeEntry && activeJournalPlace && <article className="detail-card memory-card"><div className="memory-heading"><p className="memory-kicker">{editingEntryId === activeEntry.id ? "EDIT MEMORY" : "RECENT MEMORY"}</p>{editingEntryId !== activeEntry.id && <JournalEntryActions entryId={activeEntry.id} placeName={activeJournalPlace.name} onEdit={() => setEditingEntryId(activeEntry.id)} onDeleted={() => { setActiveEntryId(null); setEditingEntryId(null); }} />}</div><h2>{activeJournalPlace.name}</h2><p className="address">⌖ <span>{activeJournalPlace.address}</span></p>{editingEntryId === activeEntry.id ? <JournalEntryForm key={activeEntry.id} entry={activeEntry} onSubmit={saveEntryEdits} onCancel={() => setEditingEntryId(null)} submitLabel="Save changes" /> : <><div className="memory-date"><time>{dateFormatter.format(new Date(activeEntry.visitedAt))}</time><span>{formatPersonalRating(activeEntry.rating)}</span></div>{(activeCategories.length > 0 || activePeople.length > 0) && <div className="memory-metadata">{activeCategories.map((item) => <span className="category-chip" key={item.id}># {item.name}</span>)}{activePeople.map((item) => <span className="person-chip" key={item.id}>@ {item.name}</span>)}</div>}<blockquote>{activeEntry.notes || "No notes were added for this visit."}</blockquote><div className="memory-footer"><span>{placeVisitCount} {placeVisitCount === 1 ? "visit" : "visits"} to this place</span><button onClick={openLogger}>Log another visit</button></div></>}</article>}
+      {mode === "journal" && activeEntry && activeJournalPlace && <article className={`detail-card memory-card ${activeEntry.access === "shared" ? "shared-visit" : ""}`}><div className="memory-heading"><p className="memory-kicker">{activeEntry.access === "shared" ? "SHARED MEMORY · READ ONLY" : editingEntryId === activeEntry.id ? "EDIT MEMORY" : "RECENT MEMORY"}</p>{editingEntryId !== activeEntry.id && <JournalEntryActions entryId={activeEntry.id} placeName={activeJournalPlace.name} onEdit={() => setEditingEntryId(activeEntry.id)} onDeleted={() => { setActiveEntryId(null); setEditingEntryId(null); }} />}</div><h2>{activeJournalPlace.name}</h2><p className="address">⌖ <span>{activeJournalPlace.address}</span></p>{activeEntry.access === "shared" && <span className="shared-memory-label">Shared by {activeEntry.ownerDisplayName ?? `@${activeEntry.ownerUsername ?? "Explore user"}`} · participant access</span>}{editingEntryId === activeEntry.id ? <JournalEntryForm key={activeEntry.id} entry={activeEntry} onSubmit={saveEntryEdits} onCancel={() => setEditingEntryId(null)} submitLabel="Save changes" /> : <><div className="memory-date"><time>{dateFormatter.format(new Date(activeEntry.visitedAt))}</time><span>{formatPersonalRating(activeEntry.rating)}</span></div>{(activeCategories.length > 0 || activePeople.length > 0) && <div className="memory-metadata">{activeCategories.map((item) => <span className="category-chip" key={item.id}># {item.name}</span>)}{activePeople.map((item) => <span className="person-chip" key={item.id}>@ {item.name}</span>)}</div>}<blockquote>{activeEntry.notes || "No notes were added for this visit."}</blockquote><div className="memory-footer"><span>{placeVisitCount} {placeVisitCount === 1 ? "visit" : "visits"} to this place</span><button onClick={openLogger}>Log another visit</button></div></>}</article>}
 
     </section>
 

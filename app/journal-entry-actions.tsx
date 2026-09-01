@@ -26,7 +26,7 @@ export function JournalEntryActions({ entryId, placeName, onEdit, onDeleted }: {
     onDeleted?.();
   }
 
-  if (isShared) return <div className="journal-entry-actions shared-entry-actions"><span>Shared by {entry.ownerDisplayName ?? `@${entry.ownerUsername ?? "Explore user"}`}</span><button type="button" className="danger" onClick={leaveEntry}>Leave</button></div>;
+  if (isShared) return <div className="journal-entry-actions shared-entry-actions"><span>Shared by {entry.ownerDisplayName ?? `@${entry.ownerUsername ?? "Explore user"}`} · read only</span><button type="button" className="danger" onClick={leaveEntry}>Remove from my journal</button></div>;
 
   return <div className="journal-entry-actions">
     <button type="button" onClick={onEdit}>Edit</button>
